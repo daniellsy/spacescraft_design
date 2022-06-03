@@ -1,0 +1,89 @@
+clear;
+clc;
+%define the parametre and initial variable quantity
+Is=2156;
+g=9.801;
+P=2.2;
+p0=5880;
+VT=420;
+yT=15000;
+Dt0=34200;
+V(1)=500;
+x(1)=674;
+y(1)=329;
+theta(1)=26*pi/180;
+alpha(1)=1.5;
+t(1)=3;
+miu(1)=P*g*t(1)/Is;
+xT=sqrt(Dt0^2-yT^2);
+cotq0=xT/yT;
+h=0.00007;
+dt=Is*h/P/g;
+i=1;  
+ while y(i)<=yT
+    if y(i)<=11000 
+    T=288.15-0.0065*y(i);
+    rou=1.2495*(T/288.15)^4.25588;
+    else 
+    T=216.65;
+    rou=0.36392/exp((y(i)-11000)/6341.42);
+    end
+    Ma=V(i)/sqrt(1.4*287*T);
+    [Cx,Cy]=interpolation(Ma,alpha(i));
+    %Runge-Kutta method
+    %k1计算
+    k11=Is/(1-miu(i))-rou*V(i)^2*Cx*Is/(2*P*p0*(1-miu(i)))-Is*sin(theta(i))/P;    
+    k21=Is*V(i)*sin(theta(i))/P/g;
+    k31=Is*V(i)*cos(theta(i))/P/g;
+    k41=VT/yT*(Is/P/g+(V(i)*k21-y(i)*k11)/(V(i)^2*sin(theta(i))))/...
+    (1+(cotq0-miu(i)*Is*VT/(P*g*yT))*cot(theta(i)));
+    %k2计算 
+    k12=Is/(1-(miu(i)+h/2))-rou*(V(i)+h*k11/2)^2*Cx*Is/(2*P*p0*(1-(miu(i)+h/2)))-Is*sin(theta(i)+h*k41/2)/P;
+    k22=Is*(V(i)+h*k11/2)*sin(theta(i)+h*k41/2)/P/g;
+    k32=Is*(V(i)+h*k11/2)*cos(theta(i)+h*k41/2)/P/g;
+    k42=VT/yT*(Is/P/g+((V(i)+h*k11/2)*k21-(y(i)+h*k21/2)*k11)/((V(i)+h*k11/2)^2*sin(theta(i)+h*k41/2)))/...
+    (1+(cotq0-(miu(i)+h/2)*Is*VT/(P*g*yT))*cot(theta(i)+h*k41/2));
+    %k3计算   
+    k13=Is/(1-(miu(i)+h/2))-rou*(V(i)+h*k12/2)^2*Cx*Is/(2*P*p0*(1-(miu(i)+h/2)))-Is*sin(theta(i)+h*k42/2)/P;
+    k23=Is*(V(i)+h*k12/2)*sin(theta(i)+h*k42/2)/P/g;
+    k33=Is*(V(i)+h*k12/2)*cos(theta(i)+h*k42/2)/P/g;
+    k43=VT/yT*(Is/P/g+((V(i)+h*k12/2)*k22-(y(i)+h*k22/2)*k12)/((V(i)+h*k12/2)^2*sin(theta(i)+h*k42/2)))/...
+    (1+(cotq0-(miu(i)+h/2)*Is*VT/(P*g*yT))*cot(theta(i)+h*k42/2));
+    %k4计算
+    k14=Is/(1-(miu(i)+h))-rou*(V(i)+h*k13)^2*Cx*Is/(2*P*p0*(1-(miu(i)+h)))-Is*sin(theta(i)+h*k43)/P;
+    k24=Is*(V(i)+h*k13)*sin(theta(i)+h*k43)/P/g;
+    k34=Is*(V(i)+h*k13)*cos(theta(i)+h*k43)/P/g;
+    k44=VT/yT*(Is/P/g+((V(i)+h*k13)*k23-(y(i)+h*k23)*k13)/((V(i)+h*k13)^2*sin(theta(i)+h*k43)))/...
+    (1+(cotq0-(miu(i)+h)*Is*VT/(P*g*yT))*cot(theta(i)+h*k43));
+    %求值   
+    V(i+1)=V(i)+h*(k11+2*k12+2*k13+k14)/6;  
+    y(i+1)=y(i)+h*(k21+2*k22+2*k23+k24)/6;  
+    x(i+1)=x(i)+h*(k31+2*k32+2*k33+k34)/6;
+    theta(i+1)=theta(i)+h*(k41+2*k42+2*k43+k44)/6;    
+    %alpha和miu求值
+    alpha(i+1)=(V(i)*k41+Is*cos(theta(i))/P)/...
+    (Is/(1-miu(i))+rou*V(i)^2*Cy*180/pi*Is/(2*P*p0*(1-miu(i))))*180/pi;
+    xT=xT-dt*VT;
+    miu(i+1)=miu(1)+P*g*yT/Is/VT*(cotq0-xT/yT);    
+    t(i+1)=Is*miu(i+1)/P/g;
+    i=i+1;
+ end
+ %draw the curves    
+plot(x,y,'k','LineWidth',1.4);
+hold on;
+plot([sqrt(Dt0^2-yT^2) xT],[yT yT],'r','LineWidth',3);
+xlabel('x/m');ylabel('H/m');title('导弹及目标弹道');
+figure(2);
+plot(t,alpha,'k','LineWidth',1.4);
+xlabel('t/s');ylabel('alpha/angle');title('攻角随时间变化曲线');
+figure(3);
+plot(t,V,'k','LineWidth',1.4);
+xlabel('t/s');ylabel('V/(m/s)');title('速度随时间变化曲线');
+figure(4);
+plot(t,miu,'k','LineWidth',1.4);
+xlabel('t/s');ylabel('μ');title('μ值随时间变化曲线');
+figure(5);
+plot(t,theta,'k','LineWidth',1.4);
+xlabel('t/s');ylabel('theta/rad');title('theta值随时间变化曲线');
+figure(6);
+plot(t,y,'k','LineWidth',1.4);
